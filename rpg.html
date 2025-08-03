@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🛡️ Text RPG 🗡️</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: #121212;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  h1 {
+    margin-bottom: 1rem;
+    color: #ffcc00;
+    text-shadow: 0 0 8px #ffcc00;
+    font-size: 2.8rem;
+    font-weight: 700;
+  }
+  #gameLog {
+    background: #222;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 800px;
+    height: 350px;
+    overflow-y: auto;
+    padding: 1.3rem 1.6rem;
+    box-shadow: 0 0 14px #333;
+    font-size: 1.3rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin-bottom: 2rem;
+    user-select: text;
+    font-weight: 500;
+  }
+  #controls {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  button {
+    background: #444;
+    border: none;
+    color: #eee;
+    padding: 0.75rem 1.6rem;
+    font-size: 1.25rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    box-shadow: 0 0 8px #666;
+    min-width: 130px;
+    font-weight: 600;
+  }
+  button:hover:not(:disabled) {
+    background: #ffcc00;
+    color: #121212;
+    box-shadow: 0 0 16px #ffcc00;
+  }
+  button:disabled {
+    background: #555;
+    cursor: not-allowed;
+    color: #999;
+    box-shadow: none;
+  }
+
+  #toggleButtons {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    flex-wrap: wrap;
+  }
+
+  #stats, #equipped, #inventory, #shop {
+    background: #222;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 800px;
+    padding: 1.4rem 1.6rem;
+    box-shadow: 0 0 14px #333;
+    margin-bottom: 2rem;
+
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+
+    transition: max-height 0.5s ease, opacity 0.5s ease, padding 0.5s ease;
+  }
+  #stats.show, #equipped.show, #inventory.show, #shop.show {
+    max-height: 700px;
+    opacity: 1;
+    overflow: visible;
+    padding: 1.4rem 1.6rem;
+  }
+
+  h2 {
+    margin-top: 0;
+    color: #ffcc00;
+    text-shadow: 0 0 6px #ffcc00;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 1rem 0 0 0;
+  }
+  li {
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #333;
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font-size: 1.15rem;
+    font-weight: 500;
+  }
+  li button {
+    padding: 0.3rem 1rem;
+    font-size: 1rem;
+    margin-left: 0.8rem;
+    min-width: 70px;
+    font-weight: 600;
+    border-radius: 6px;
+  }
+  #gold {
+    font-weight: 700;
+    color: #ffd700;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 1.4rem;
+    text-shadow: 0 0 8px #ffd700;
+  }
+</style>
+</head>
+<body>
+
+  <h1>🛡️ Text RPG 🗡️</h1>
+
+  <div id="gameLog">Welcome, brave hero! ⚔️ Type "Explore" to start your adventure.</div>
+
+  <div id="controls">
+    <button id="exploreBtn">🌍 Explore</button>
+    <button id="attackBtn" disabled>⚔️ Attack</button>
+    <button id="magicBtn" disabled>✨ Cast Magic</button>
+  </div>
+
+  <div id="toggleButtons">
+    <button id="toggleStatsBtn">📊 Stats</button>
+    <button id="toggleEquippedBtn">🧥 Equipped</button>
+    <button id="toggleInventoryBtn">🎒 Inventory</button>
+    <button id="toggleShopBtn">🏪 Shop</button>
+  </div>
+
+  <div id="stats">
+    <h2>📊 Stats</h2>
+    <div id="statsContent"></div>
+  </div>
+
+  <div id="equipped">
+    <h2>🧥 Equipped</h2>
+    <ul id="equippedList"></ul>
+  </div>
+
+  <div id="inventory">
+    <h2>🎒 Inventory</h2>
+    <ul id="inventoryList"></ul>
+  </div>
+
+  <div id="shop">
+    <h2>🏪 Shop</h2>
+    <div id="gold">Gold: 0</div>
+    <ul id="shopList"></ul>
+  </div>
+
+<script>
+  const gameLog = document.getElementById('gameLog');
+  const exploreBtn = document.getElementById('exploreBtn');
+  const attackBtn = document.getElementById('attackBtn');
+  const magicBtn = document.getElementById('magicBtn');
+
+  const stats = document.getElementById('stats');
+  const equipped = document.getElementById('equipped');
+  const inventory = document.getElementById('inventory');
+  const shop = document.getElementById('shop');
+
+  const toggleStatsBtn = document.getElementById('toggleStatsBtn');
+  const toggleEquippedBtn = document.getElementById('toggleEquippedBtn');
+  const toggleInventoryBtn = document.getElementById('toggleInventoryBtn');
+  const toggleShopBtn = document.getElementById('toggleShopBtn');
+
+  const statsContent = document.getElementById('statsContent');
+  const equippedList = document.getElementById('equippedList');
+  const inventoryList = document.getElementById('inventoryList');
+  const shopList = document.getElementById('shopList');
+  const goldDisplay = document.getElementById('gold');
+
+  let player = {
+    name: '🧙‍♂️ Hero',
+    hp: 100,
+    maxHp: 100,
+    mp: 50,
+    maxMp: 50,
+    attack: 15,
+    magic: 20,
+    level: 1,
+    xp: 0,
+    gold: 100,
+    inventory: [],
+    equipped: {
+      weapon: null,
+      armor: null
+    }
+  };
+
+  let enemy = null;
+
+  const enemies = [
+    { name: '🐉 Dragon', hp: 50, attack: 10, level: 2, xpReward: 40, goldReward: 30 },
+    { name: '👹 Goblin', hp: 30, attack: 8, level: 1, xpReward: 20, goldReward: 15 },
+    { name: '🕷️ Spider', hp: 20, attack: 5, level: 1, xpReward: 15, goldReward: 10 },
+    { name: '👻 Ghost', hp: 40, attack: 12, level: 2, xpReward: 30, goldReward: 25 }
+  ];
+
+const items = [
+  { id: 1, name: '🗡️ Sword', type: 'weapon', attack: 10, magic: 0, defense: 0, price: 50 },
+  { id: 2, name: '🛡️ Shield', type: 'armor', attack: 0, magic: 0, defense: 8, price: 40 },
+  { id: 3, name: '✨ Magic Staff', type: 'weapon', attack: 5, magic: 15, defense: 0, price: 75 },
+  { id: 4, name: '🧙‍♂️ Robe', type: 'armor', attack: 0, magic: 5, defense: 5, price: 60 },
+  { id: 5, name: '🧪 HP Potion', type: 'consumable', heal: 50, price: 20 },
+  { id: 6, name: '🔮 MP Potion', type: 'consumable', mpRestore: 30, price: 25 }
+];
+
+  function log(text) {
+    gameLog.textContent += '\n' + text;
+    gameLog.scrollTop = gameLog.scrollHeight;
+  }
+
+  function updateStats() {
+    let totalAttack = player.attack;
+    let totalMagic = player.magic;
+    let totalDefense = 0;
+
+    if (player.equipped.weapon) {
+      totalAttack += player.equipped.weapon.attack;
+      totalMagic += player.equipped.weapon.magic;
+      totalDefense += player.equipped.weapon.defense;
+    }
+    if (player.equipped.armor) {
+      totalAttack += player.equipped.armor.attack;
+      totalMagic += player.equipped.armor.magic;
+      totalDefense += player.equipped.armor.defense;
+    }
+
+    const xpNeeded = player.level * 100;
+    const xpProgress = `${player.xp}/${xpNeeded}`;
+
+    statsContent.innerHTML = `
+      Name: <strong>${player.name}</strong><br/>
+      Level: <strong>${player.level}</strong><br/>
+      HP: <strong>${player.hp} / ${player.maxHp}</strong><br/>
+      MP: <strong>${player.mp} / ${player.maxMp}</strong><br/>
+      Attack: <strong>${totalAttack}</strong><br/>
+      Magic: <strong>${totalMagic}</strong><br/>
+      Defense: <strong>${totalDefense}</strong><br/>
+      XP: <strong>${xpProgress}</strong><br/>
+      Gold: <strong>${player.gold}</strong>
+    `;
+  }
+
+  function updateEquippedList() {
+    equippedList.innerHTML = '';
+    ['weapon', 'armor'].forEach(slot => {
+      const eq = player.equipped[slot];
+      const li = document.createElement('li');
+      if (eq) {
+        li.textContent = `${eq.name} (Atk +${eq.attack}, Mag +${eq.magic}, Def +${eq.defense})`;
+        const unequipBtn = document.createElement('button');
+        unequipBtn.textContent = 'Unequip';
+        unequipBtn.onclick = () => {
+          player.inventory.push(eq);
+          player.equipped[slot] = null;
+          log(`🗑️ You unequipped ${eq.name}.`);
+          updateEquippedList();
+          updateInventoryList();
+          updateStats();
+        };
+        li.appendChild(unequipBtn);
+      } else {
+        li.textContent = `No ${slot} equipped`;
+      }
+      equippedList.appendChild(li);
+    });
+  }
+
+function useConsumable(index) {
+  const item = player.inventory[index];
+  if (!item || item.type !== 'consumable') return;
+
+  if (item.heal) {
+    const oldHp = player.hp;
+    player.hp = Math.min(player.maxHp, player.hp + item.heal);
+    log(`🧪 You used ${item.name} and recovered ${player.hp - oldHp} HP!`);
+  } else if (item.mpRestore) {
+    const oldMp = player.mp;
+    player.mp = Math.min(player.maxMp, player.mp + item.mpRestore);
+    log(`🔮 You used ${item.name} and restored ${player.mp - oldMp} MP!`);
+  }
+
+  player.inventory.splice(index, 1);
+  updateStats();
+  updateInventoryList();
+}
+
+function updateInventoryList() {
+  inventoryList.innerHTML = '';
+  if (player.inventory.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'Inventory is empty';
+    inventoryList.appendChild(li);
+    return;
+  }
+
+  player.inventory.forEach((item, index) => {
+    const li = document.createElement('li');
+    li.textContent = `${item.name}`;
+
+    if (item.type === 'consumable') {
+      if (item.heal) li.textContent += ` (Heals ${item.heal} HP)`;
+      if (item.mpRestore) li.textContent += ` (Restores ${item.mpRestore} MP)`;
+      const useBtn = document.createElement('button');
+      useBtn.textContent = 'Use';
+      useBtn.onclick = () => useConsumable(index);
+      li.appendChild(useBtn);
+    } else {
+      li.textContent += ` (Atk +${item.attack}, Mag +${item.magic}, Def +${item.defense})`;
+      const equipBtn = document.createElement('button');
+      equipBtn.textContent = 'Equip';
+      equipBtn.onclick = () => equipItem(index);
+      li.appendChild(equipBtn);
+    }
+
+    inventoryList.appendChild(li);
+  });
+}
+// This is the section that was causing the problem.
+// The code below has been removed.
+/*
+    player.inventory.forEach((item, index) => {
+      const li = document.createElement('li');
+      li.textContent = `${item.name} (Atk +${item.attack}, Mag +${item.magic}, Def +${item.defense})`;
+      const equipBtn = document.createElement('button');
+      equipBtn.textContent = 'Equip';
+      equipBtn.onclick = () => {
+        equipItem(index);
+      };
+      li.appendChild(equipBtn);
+      inventoryList.appendChild(li);
+    });
+*/
+
+
+  function equipItem(index) {
+    const item = player.inventory[index];
+    if (!item) return;
+    const slot = item.type;
+    if (player.equipped[slot]) {
+      player.inventory.push(player.equipped[slot]);
+    }
+    player.equipped[slot] = item;
+    player.inventory.splice(index, 1);
+    log(`⚔️ You equipped ${item.name}.`);
+    updateEquippedList();
+    updateInventoryList();
+    updateStats();
+  }
+
+  function updateShopList() {
+    shopList.innerHTML = '';
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = `${item.name} - Price: ${item.price} Gold`;
+      // Check if item has combat stats to display them
+      if (item.attack || item.magic || item.defense) {
+        li.textContent += ` (Atk +${item.attack}, Mag +${item.magic}, Def +${item.defense})`;
+      } else if (item.heal || item.mpRestore) {
+        // Display stats for consumables
+        if (item.heal) li.textContent += ` (Heals ${item.heal} HP)`;
+        if (item.mpRestore) li.textContent += ` (Restores ${item.mpRestore} MP)`;
+      }
+
+      const buyBtn = document.createElement('button');
+      buyBtn.textContent = 'Buy';
+      buyBtn.onclick = () => {
+        if (player.gold >= item.price) {
+          player.gold -= item.price;
+          player.inventory.push({...item});
+          log(`💰 You bought a ${item.name}.`);
+          updateInventoryList();
+          updateStats();
+          updateShopList();
+        } else {
+          log(`❌ Not enough gold to buy ${item.name}.`);
+        }
+      };
+      li.appendChild(buyBtn);
+      shopList.appendChild(li);
+    });
+    goldDisplay.textContent = `Gold: ${player.gold}`;
+  }
+
+  function updateButtons(inBattle) {
+    exploreBtn.disabled = inBattle;
+    attackBtn.disabled = !inBattle;
+    magicBtn.disabled = !inBattle;
+  }
+
+ const bosses = [
+  { name: '🔥 Fire Dragon (Boss)', hp: 1000, attack: 50, level: 5, xpReward: 300, goldReward: 100 },
+  { name: '👿 Demon Lord (Boss)', hp: 2000, attack: 100, level: 10, xpReward: 500, goldReward: 200 },
+  { name: '🧟‍♂️ Lich King (Boss)', hp: 3000, attack: 150, level: 15, xpReward: 700, goldReward: 350 }
+];
+
+function startBattle() {
+  if (player.level % 5 === 0) {
+    const availableBosses = bosses.filter(b => b.level <= player.level);
+    if (availableBosses.length > 0) {
+      enemy = {...availableBosses[availableBosses.length - 1]};
+    } else {
+      enemy = {...enemies[Math.floor(Math.random() * enemies.length)]};
+    }
+  } else {
+    // Normal enemy
+    enemy = {...enemies[Math.floor(Math.random() * enemies.length)]};
+  }
+  enemy.hpCurrent = enemy.hp;
+  log(`\n⚔️ A wild ${enemy.name} (Level ${enemy.level}) appears! Prepare for battle!`);
+  updateButtons(true);
+}
+
+
+  function endBattle(won) {
+  if (won) {
+    let xpGain = enemy.xpReward;
+    let goldGain = enemy.goldReward;
+    player.xp += xpGain;
+    player.gold += goldGain;
+    log(`🎉 You defeated the ${enemy.name} and gained ${xpGain} XP and ${goldGain} gold!`);
+
+    // โอกาสดรอปไอเท็ม 15%
+    const dropChance = 0.15;
+    if (Math.random() < dropChance) {
+      const droppedItem = items[Math.floor(Math.random() * items.length)];
+      player.inventory.push({...droppedItem});
+      log(`🎁 The ${enemy.name} dropped ${droppedItem.name}! It has been added to your inventory.`);
+      updateInventoryList();
+    }
+
+    checkLevelUp();
+    updateStats();
+    updateShopList();
+  } else {
+    log('💀 You were defeated... Game Over.');
+    updateButtons(false);
+    exploreBtn.disabled = true;
+    attackBtn.disabled = true;
+    magicBtn.disabled = true;
+  }
+  enemy = null;
+  updateButtons(false);
+}
+
+  function checkLevelUp() {
+    const nextLevelXp = player.level * 100;
+    if (player.xp >= nextLevelXp) {
+      player.level++;
+      player.maxHp += 20;
+      player.hp = player.maxHp;
+      player.maxMp += 10;
+      player.mp = player.maxMp;
+      player.attack += 5;
+      player.magic += 5;
+      log(`✨ Congratulations! You leveled up to Level ${player.level}! 💪`);
+    }
+  }
+
+  function enemyAttack() {
+    if (!enemy) return;
+    let damage = Math.max(0, enemy.attack - Math.floor(Math.random() * 5));
+    let defense = 0;
+    if (player.equipped.armor) {
+      defense += player.equipped.armor.defense;
+    }
+    damage = Math.max(0, damage - defense);
+    player.hp -= damage;
+    log(`👹 ${enemy.name} attacks and deals ${damage} damage! 💥`);
+    if (player.hp <= 0) {
+      player.hp = 0;
+      endBattle(false);
+    }
+    updateStats();
+  }
+
+  exploreBtn.onclick = () => {
+    if (!enemy) {
+      const chance = Math.random();
+      if (chance < 0.7) {
+        startBattle();
+      } else {
+        log('🌿 You explore peacefully. No enemies found.');
+      }
+    }
+  };
+
+  attackBtn.onclick = () => {
+    if (!enemy) return;
+    let totalAttack = player.attack;
+    if (player.equipped.weapon) totalAttack += player.equipped.weapon.attack;
+    let damage = Math.max(0, totalAttack + Math.floor(Math.random() * 10));
+    enemy.hpCurrent -= damage;
+    log(`🗡️ You strike the ${enemy.name} for ${damage} damage.`);
+    if (enemy.hpCurrent <= 0) {
+      enemy.hpCurrent = 0;
+      endBattle(true);
+    } else {
+      enemyAttack();
+    }
+  };
+
+  magicBtn.onclick = () => {
+    if (!enemy) return;
+    if (player.mp < 10) {
+      log('❌ Not enough MP to cast magic!');
+      return;
+    }
+    player.mp -= 10;
+    let totalMagic = player.magic;
+    if (player.equipped.weapon) totalMagic += player.equipped.weapon.magic;
+    if (player.equipped.armor) totalMagic += player.equipped.armor.magic;
+    let damage = Math.max(0, totalMagic + Math.floor(Math.random() * 15));
+    enemy.hpCurrent -= damage;
+    log(`✨ You cast a spell on the ${enemy.name} for ${damage} magic damage.`);
+    updateStats();
+    if (enemy.hpCurrent <= 0) {
+      enemy.hpCurrent = 0;
+      endBattle(true);
+    } else {
+      enemyAttack();
+    }
+  };
+
+  toggleStatsBtn.onclick = () => {
+    stats.classList.toggle('show');
+  };
+  toggleEquippedBtn.onclick = () => {
+    equipped.classList.toggle('show');
+  };
+  toggleInventoryBtn.onclick = () => {
+    inventory.classList.toggle('show');
+  };
+  toggleShopBtn.onclick = () => {
+    shop.classList.toggle('show');
+  };
+
+  // Initialize UI
+  updateStats();
+  updateEquippedList();
+  updateInventoryList();
+  updateShopList();
+</script>
+
+</body>
+</html>
